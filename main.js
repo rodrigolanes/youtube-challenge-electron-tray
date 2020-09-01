@@ -1,7 +1,5 @@
 const { resolve, basename } = require('path');
-const {
-  app, Menu, Tray, dialog,
-} = require('electron');
+const { app, Menu, Tray, dialog } = require('electron');
 
 const { spawn } = require('child_process');
 const fixPath = require('fix-path');
@@ -12,7 +10,9 @@ const Sentry = require('@sentry/electron');
 
 fixPath();
 
-Sentry.init({ dsn: 'https://18c9943a576d41248b195b5678f2724e@sentry.io/1506479' });
+Sentry.init({
+  dsn: 'https://18c9943a576d41248b195b5678f2724e@sentry.io/1506479',
+});
 
 const schema = {
   projects: {
@@ -46,24 +46,33 @@ function render(tray = mainTray) {
   const projects = storedProjects ? JSON.parse(storedProjects) : [];
   const locale = getLocale();
 
-  const items = projects.map(({ name, path }) => ({
-    label: name,
-    submenu: [
-      {
-        label: locale.open,
-        click: () => {
-          spawn('code', [path], { shell: true });
+  const items = projects
+    .map(({ name, path }) => ({
+      label: name,
+      submenu: [
+        {
+          label: locale.open,
+          click: () => {
+            spawn('code', [path], { shell: true });
+          },
         },
-      },
-      {
-        label: locale.remove,
-        click: () => {
-          store.set('projects', JSON.stringify(projects.filter(item => item.path !== path)));
-          render();
+        {
+          label: locale.remove,
+          click: () => {
+            store.set(
+              'projects',
+              JSON.stringify(projects.filter((item) => item.path !== path))
+            );
+            render();
+          },
         },
-      },
-    ],
-  }));
+      ],
+    }))
+    .sort((a, b) => {
+      if (a.label > b.label) return 1;
+      if (a.label < b.label) return -1;
+      return 0;
+    });
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -73,7 +82,7 @@ function render(tray = mainTray) {
 
         if (!result) return;
 
-        const [path] = result;
+        const [path] = `"${result}"`;
         const name = basename(path);
 
         store.set(
@@ -84,7 +93,7 @@ function render(tray = mainTray) {
               path,
               name,
             },
-          ]),
+          ])
         );
 
         render();
@@ -110,7 +119,7 @@ function render(tray = mainTray) {
   tray.on('click', tray.popUpContextMenu);
 }
 
-app.on('ready', () => {
+app.on('ready', async () => {
   mainTray = new Tray(resolve(__dirname, 'assets', 'iconTemplate.png'));
 
   render(mainTray);
